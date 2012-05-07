@@ -37,7 +37,7 @@ action :install do
 
     execute "Extract #{new_resource.app}" do
       cwd       new_resource.destination
-      command   %{unzip '#{downloaded_file}'}
+      command   %{unzip '#{downloaded_file}' >/dev/null}
 
       creates   "#{new_resource.destination}/#{new_resource.app}.app"
     end

@@ -16,7 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 actions :install
 
 attribute :app,         :kind_of => String, :name_attribute => true
@@ -24,7 +23,9 @@ attribute :source,      :kind_of => String
 attribute :zip_file,    :kind_of => String
 attribute :destination, :kind_of => String, :default => "/Applications"
 attribute :checksum,    :kind_of => String
+attribute :extension,   :kind_of => [String, FalseClass], :default => "app"
 attribute :installed,   :kind_of => [TrueClass, FalseClass], :default => false
+attribute :installed_resource, :kind_of => String, :default => nil
 
 def initialize(name, run_context = nil)
   super

@@ -16,7 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-default['zip_app']['apps']      = []
-
-default['zip_app']['data_bag']  = ['apps', node['platform']]
+default[:zip_app][:base_dir]    = "/Applications"
+default[:zip_app][:cache_dir]   = Chef::Config[:file_cache_path]
+default[:zip_app][:apps]        = []
+default[:zip_app][:data_bag]    = ['apps', node['platform']]

@@ -19,9 +19,26 @@
 
 def load_current_resource
   @zip_pkg = Chef::Resource::ZipAppPackage.new(new_resource.name)
+  @zip_pkg.app(new_resource.app)
   Chef::Log.debug("Checking for application #{new_resource.app}")
-  installed = ::File.directory?(
-    "#{new_resource.destination}/#{new_resource.app}.app")
+
+  # Set extension
+  new_resource.extension(new_resource.extension ? ".#{new_resource.extension}" : '')
+
+  # Set correct destination based on extension
+  case new_resource.extension
+  when ".prefPane"
+    new_resource.destination(::File.expand_path('~/Library/PreferencePanes')) if new_resource.destination == '/Applications'
+  else
+    new_resource.destination(::File.expand_path(new_resource.destination))
+  end
+
+  # Set installed flag
+  if new_resource.installed_resource
+    installed = ::File.exist?(new_resource.installed_resource)
+  else
+    installed = ::File.exist?("#{::File.expand_path(new_resource.destination)}/#{new_resource.app}#{new_resource.extension}")
+  end
   @zip_pkg.installed(installed)
 end
 
@@ -30,16 +47,35 @@ action :install do
     zip_file = new_resource.zip_file || new_resource.source.split('/').last
     downloaded_file = "#{Chef::Config[:file_cache_path]}/#{zip_file}"
 
-    remote_file downloaded_file do
-      source    new_resource.source
-      checksum  new_resource.checksum if new_resource.checksum
+    if new_resource.source =~ /^(https?|ftp|git):\/\/.+$/i
+      remote_file downloaded_file do
+        source new_resource.source
+        checksum new_resource.checksum if new_resource.checksum
+      end
+    elsif new_resource.source
+      cookbook_file downloaded_file do
+        source new_resource.source
+        checksum new_resource.checksum if new_resource.checksum
+      end
     end
 
-    execute "Extract #{new_resource.app}" do
-      cwd       new_resource.destination
-      command   %{unzip '#{downloaded_file}' >/dev/null}
+    ruby_block "Extract #{new_resource.app}" do
+      block do
+        tmp = Chef::Config[:file_cache_path]
 
-      creates   "#{new_resource.destination}/#{new_resource.app}.app"
+        # Unzip
+        %x[unzip -qq '#{downloaded_file}' -d #{tmp}]
+
+        # Install application
+        case new_resource.extension
+        when ".mpkg"
+          %x[sudo installer -pkg #{tmp}/#{new_resource.app}.mpkg -target /]
+        when ".prefPane"
+          FileUtils.cp_r "#{tmp}/#{new_resource.app}#{new_resource.extension}", new_resource.destination
+        else
+          FileUtils.cp_r "#{tmp}/#{new_resource.app}#{new_resource.extension}", new_resource.destination
+        end
+      end
     end
   end
 end
